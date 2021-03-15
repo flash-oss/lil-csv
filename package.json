@@ -1,0 +1,44 @@
+{
+  "name": "lil-csv",
+  "version": "0.0.1",
+  "description": "Mini module for CSV file manipulations",
+  "source": "src/lil-csv.js",
+  "main": "dist/lil-csv.js",
+  "exports": "./dist/lil-csv.modern.js",
+  "module": "dist/lil-csv.module.js",
+  "unpkg": "dist/lil-csv.umd.js",
+  "umd:main": "dist/lil-csv.umd.js",
+  "scripts": {
+    "prepublishOnly": "npm run build",
+    "ci": "npm i && npm t",
+    "test": "mocha --require esm",
+    "build": "microbundle",
+    "dev": "microbundle watch"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/flash-oss/lil-csv.git"
+  },
+  "keywords": [
+    "csv",
+    "parse",
+    "csv-parser"
+  ],
+  "author": "",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/flash-oss/lil-csv/issues"
+  },
+  "homepage": "https://github.com/flash-oss/lil-csv#readme",
+  "devDependencies": {
+    "esm": "^3.2.25",
+    "microbundle": "^0.13.0",
+    "mocha": "^8.3.2",
+    "nyc": "^15.1.0",
+    "prettier": "^2.2.1"
+  },
+  "files": [
+    "src",
+    "dist"
+  ]
+}

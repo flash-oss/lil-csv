@@ -1,2 +1,2 @@
 # lil-csv
-Minimal CSV file manipulations
+Mini module for CSV file manipulations
