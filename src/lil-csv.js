@@ -1,3 +1,10 @@
+export const isString = (f) => typeof f === "string";
+export const isNumber = (f) => typeof f === "number";
+export const isBoolean = (f) => typeof f === "boolean";
+export const isDate = (o) => o instanceof Date && !isNaN(o.valueOf());
+
+export const isFunction = (f) => typeof f === "function";
+
 export function parse(str, { headers = false } = {}) {
     const entries = [];
     let quote = false; // 'true' means we're inside a quoted field
@@ -27,6 +34,7 @@ export function parse(str, { headers = false } = {}) {
             // If it's a comma, move on to the next column
             if (cc === ",") {
                 ++col;
+                entries[row][col] = ""; // If line ends with comma we need to add an empty column to the row.
                 continue;
             }
 
@@ -58,6 +66,9 @@ export function parse(str, { headers = false } = {}) {
         throw Error("Can't parse CSV as data. Some headers have same name.");
     }
 
+    // Auto-construct the headers (JSON objects keys) from the top most line of the file.
+    if (typeof headers === "boolean") headers = Object.fromEntries(headerEntry.map((h) => [h, true]));
+
     return entries.map((entry) => {
         const processedEntry = {};
         for (let col = 0; col < entry.length; col++) {
@@ -66,7 +77,7 @@ export function parse(str, { headers = false } = {}) {
             let value = entry[col];
 
             const parse = headers[dataHeaderName].parse || headers[dataHeaderName];
-            if (typeof parse === "function") value = parse(value);
+            if (isFunction(parse)) value = parse(value);
 
             processedEntry[headers[dataHeaderName].jsonName || dataHeaderName] = value;
         }
@@ -74,3 +85,33 @@ export function parse(str, { headers = false } = {}) {
     });
 }
 
+export function generate({ header, rows, newLine = "\n" }) {
+    if (!header) header = "";
+    else {
+        if (Array.isArray(header)) header = header.map((h) => (isString(h) && h.includes(",") ? `"${h}"` : h)).join();
+        if (!isString(header)) throw new Error("Header must be either string or array of strings");
+        header = header + newLine;
+    }
+
+    return (
+        header +
+        rows
+            .map((row) =>
+                row
+                    .map((v) => {
+                        if (
+                            v == null ||
+                            v === "" ||
+                            !((isNumber(v) && !isNaN(v)) || isString(v) || isDate(v) || isBoolean(v))
+                        )
+                            return ""; // ignore bad data
+                        v = isDate(v) ? v.toISOString() : String(v); // convert any kind of value to string
+                        v = v.replace(/"/g, '\\"'); // Escape quote character
+                        if (v.includes(",")) v = '"' + v + '"'; // Add quotes if value has commas
+                        return v;
+                    })
+                    .join()
+            )
+            .join(newLine)
+    );
+}
