@@ -38,14 +38,14 @@ export function parse(str, { header = false, escapeChar = "\\" } = {}) {
                 continue;
             }
 
-            // If it's a newline (LF or CR),
+            // If it's a lineTerminator (LF or CR),
             // move on to the next row and move to column 0 of that new row
             if (cc === "\n" || cc === "\r") {
                 ++row;
                 col = 0;
                 newRow = false;
 
-                // If it's a newline (CRLF), skip the next character
+                // If it's a lineTerminator (CRLF), skip the next character
                 // and move on to the next row and move to column 0 of that new row
                 if (cc === "\r" && nc === "\n") {
                     ++c;
@@ -85,7 +85,7 @@ export function parse(str, { header = false, escapeChar = "\\" } = {}) {
     });
 }
 
-export function generate({ header, rows, newLine: lineTerminator = "\n", escapeChar = "\\" }) {
+export function generate({ header, rows, lineTerminator = "\n", escapeChar = "\\" }) {
     if (!header) header = "";
     else {
         if (Array.isArray(header)) header = header.map((h) => (isString(h) && h.includes(",") ? `"${h}"` : h)).join();
