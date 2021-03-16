@@ -1,7 +1,7 @@
 {
   "name": "lil-csv",
   "version": "1.0.0",
-  "description": "Mini module for CSV file manipulations",
+  "description": "Mini 1k module for CSV file manipulations",
   "source": "src/lil-csv.js",
   "main": "dist/lil-csv.js",
   "exports": "./dist/lil-csv.modern.js",
