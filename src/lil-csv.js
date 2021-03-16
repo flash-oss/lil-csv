@@ -5,7 +5,7 @@ export const isDate = (o) => o instanceof Date && !isNaN(o.valueOf());
 
 export const isFunction = (f) => typeof f === "function";
 
-export function parse(str, { headers = false } = {}) {
+export function parse(str, { header = false, escapeChar = "\\" } = {}) {
     const entries = [];
     let quote = false; // 'true' means we're inside a quoted field
     let newRow = false; // 'true' means we need to finish this line
@@ -18,7 +18,7 @@ export function parse(str, { headers = false } = {}) {
         entries[row][col] = entries[row][col] || ""; // Create a new column (start with empty string) if necessary
 
         // If it's an escaping, then just use the following character as data
-        if (cc === "\\") {
+        if (cc === escapeChar) {
             entries[row][col] += nc;
             ++c;
             continue;
@@ -59,7 +59,7 @@ export function parse(str, { headers = false } = {}) {
         entries[row][col] += cc;
     }
 
-    if (!headers) return entries; // no data processing needed.
+    if (!header) return entries; // no data processing needed.
 
     const headerEntry = entries.shift();
     if (new Set(headerEntry).size !== headerEntry.length) {
@@ -67,30 +67,30 @@ export function parse(str, { headers = false } = {}) {
     }
 
     // Auto-construct the headers (JSON objects keys) from the top most line of the file.
-    if (typeof headers === "boolean") headers = Object.fromEntries(headerEntry.map((h) => [h, true]));
+    if (typeof header === "boolean") header = Object.fromEntries(headerEntry.map((h) => [h, true]));
 
     return entries.map((entry) => {
         const processedEntry = {};
         for (let col = 0; col < entry.length; col++) {
             const dataHeaderName = headerEntry[col];
-            if (!headers[dataHeaderName]) continue; // We don't want this column
+            if (!header[dataHeaderName]) continue; // We don't want this column
             let value = entry[col];
 
-            const parse = headers[dataHeaderName].parse || headers[dataHeaderName];
+            const parse = header[dataHeaderName].parse || header[dataHeaderName];
             if (isFunction(parse)) value = parse(value);
 
-            processedEntry[headers[dataHeaderName].jsonName || dataHeaderName] = value;
+            processedEntry[header[dataHeaderName].jsonName || dataHeaderName] = value;
         }
         return processedEntry;
     });
 }
 
-export function generate({ header, rows, newLine = "\n" }) {
+export function generate({ header, rows, newLine: lineTerminator = "\n", escapeChar = "\\" }) {
     if (!header) header = "";
     else {
         if (Array.isArray(header)) header = header.map((h) => (isString(h) && h.includes(",") ? `"${h}"` : h)).join();
         if (!isString(header)) throw new Error("Header must be either string or array of strings");
-        header = header + newLine;
+        header = header + lineTerminator;
     }
 
     return (
@@ -106,12 +106,12 @@ export function generate({ header, rows, newLine = "\n" }) {
                         )
                             return ""; // ignore bad data
                         v = isDate(v) ? v.toISOString() : String(v); // convert any kind of value to string
-                        v = v.replace(/"/g, '\\"'); // Escape quote character
+                        v = v.replace(/"/g, escapeChar + '"'); // Escape quote character
                         if (v.includes(",")) v = '"' + v + '"'; // Add quotes if value has commas
                         return v;
                     })
                     .join()
             )
-            .join(newLine)
+            .join(lineTerminator)
     );
 }

@@ -25,7 +25,7 @@ describe("parse", () => {
         const text = `skip me,asIs,stringColumn,boolean column, number column \r\nskipping this data,"as is",bla bla,false,123.123
 `;
         const rows = parse(text, {
-            headers: {
+            header: {
                 asIs: true,
                 stringColumn: String,
                 "boolean column": { parse: (v) => Boolean(v && v !== "false"), jsonName: "booleanColumn" },
@@ -41,7 +41,7 @@ describe("parse", () => {
         const text = `asIs,stringColumn,boolean column, number column \r\n"as is",bla bla,false,123.123
 `;
         const rows = parse(text, {
-            headers: true,
+            header: true,
         });
         assert.deepStrictEqual(rows, [
             { asIs: "as is", stringColumn: "bla bla", "boolean column": "false", " number column ": "123.123" },
@@ -52,7 +52,7 @@ describe("parse", () => {
         const text = `col1,col2,col1\r\nbla bla,false,123.123
 `;
         assert.throws(
-            () => parse(text, { headers: true }),
+            () => parse(text, { header: true }),
             (err) => err.message === "Can't parse CSV as data. Some headers have same name."
         );
     });
@@ -126,7 +126,7 @@ describe("generate + parse", () => {
             ],
         });
         const data = parse(text, {
-            headers: {
+            header: {
                 "A string": { jsonName: "stringX" },
                 num: { jsonName: "numberX", parse: (v) => (v && !Number.isNaN(Number(v)) ? Number(v) : "") },
                 bool: { jsonName: "booleanX", parse: (v) => Boolean(v && v !== "false") },
