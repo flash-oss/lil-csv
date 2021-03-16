@@ -67,7 +67,7 @@ export function parse(str, { header = false, escapeChar = "\\" } = {}) {
     }
 
     // Auto-construct the headers (JSON objects keys) from the top most line of the file.
-    if (typeof header === "boolean") header = Object.fromEntries(headerEntry.map((h) => [h, true]));
+    if (typeof header === "boolean") header = headerEntry.reduce((o, h) => ((o[h] = true), o), {});
 
     return entries.map((entry) => {
         const processedEntry = {};
