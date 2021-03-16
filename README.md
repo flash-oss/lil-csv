@@ -32,8 +32,8 @@ Process rows to JSON objects:
 ```js
 import { parse } from "lil-csv";
 
-const text = `Implicit skip,Explicit skip,As is,Definitelly a string,rename me,a Boolean,And a Number
-skipping this cell,skipping this one as well,as is data,"data, with, commas",renamed column data,false,123.123`;
+const text = `Implicit skip,Explicit skip,As is,Definitelly a string,rename me,a Boolean,a date,dob,And a Number
+skipping this cell,skipping this one as well,as is data,"data, with, commas",renamed column data,false,2020-12-12T23:59:59Z,1999-09-09,123.123`;
 
 const rows = parse(text, {
   headers: {
@@ -65,7 +65,7 @@ console.log(rows);
 //         'Definitelly a string': 'data, with, commas',
 //         newName: 'renamed column data',
 //         'a Boolean': false,
-//         date: [Date: 2020-12-12T00:00:00.000Z],
+//         date: [Date: 2020-12-12T23:59:59.000Z],
 //         dob: "1999-09-09",
 //         'And a Number': 123.123
 //     }
