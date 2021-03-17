@@ -6,7 +6,7 @@ describe("parse", () => {
     it("should parse", () => {
         const text = `Column,Second Column,else\rhere, we go ,false\r\n"with,comma","with \\" escaped quotes",123\n"",empty,
 `;
-        const rows = parse(text);
+        const rows = parse(text, { header: false });
         assert.deepStrictEqual(rows, [
             ["Column", "Second Column", "else"],
             ["here", " we go ", "false"],
@@ -17,7 +17,7 @@ describe("parse", () => {
 
     it("should parse funky data", () => {
         const text = `"Column","Second" Column,Third "Column",Middle "quotes" column`;
-        const rows = parse(text);
+        const rows = parse(text, { header: false });
         assert.deepStrictEqual(rows, [["Column", "Second Column", `Third Column`, `Middle quotes column`]]);
     });
 
@@ -61,14 +61,13 @@ describe("parse", () => {
 describe("generate", () => {
     it("should generate and parse back", () => {
         const rows = parse(
-            generate({
-                rows: [
-                    [`Column`, `Second Column`, `else`],
-                    ["here", " we go ", "false"],
-                    ["with,comma", 'with " escaped quotes', "123"],
-                    ["", "empty", ""],
-                ],
-            })
+            generate([
+                [`Column`, `Second Column`, `else`],
+                ["here", " we go ", "false"],
+                ["with,comma", 'with " escaped quotes', "123"],
+                ["", "empty", ""],
+            ]),
+            { header: false }
         );
         assert.deepStrictEqual(rows, [
             [`Column`, `Second Column`, `else`],
@@ -79,14 +78,14 @@ describe("generate", () => {
     });
 
     it("should generate with header", () => {
-        const rows = generate({
-            header: [`Column`, `Second Column`, `else`],
-            rows: [
+        const rows = generate(
+            [
                 ["here", " we go ", "false"],
                 ["with,comma", 'with " escaped quotes', "123"],
                 ["", "empty", ""],
             ],
-        });
+            { header: [`Column`, `Second Column`, `else`] }
+        );
         assert.deepStrictEqual(
             rows,
             `Column,Second Column,else
@@ -97,9 +96,8 @@ here, we go ,false
     });
 
     it("should auto format some primitives", () => {
-        const rows = generate({
+        const rows = generate([[new Date("2020-12-12"), 123.123, false]], {
             header: [`Column`, `Second Column`, `else`],
-            rows: [[new Date("2020-12-12"), 123.123, false]],
         });
         assert.deepStrictEqual(
             rows,
@@ -109,22 +107,22 @@ here, we go ,false
     });
 
     it("should ignore bad data", () => {
-        const rows = generate({
-            rows: [[null, undefined, {}, [], () => {}, NaN, "", new Map(), new Set()]],
-        });
+        const rows = generate([[null, undefined, {}, [], () => {}, NaN, "", new Map(), new Set()]]);
         assert.deepStrictEqual(rows, `,,,,,,,,`);
     });
 });
 
 describe("generate + parse", () => {
     it("should work on fully customised options", () => {
-        const text = generate({
-            header: [`A string`, `num`, `bool`, `date`, `date of birth`, `bad data`, `skip this`, `skip this too`],
-            rows: [
+        const text = generate(
+            [
                 ["my str", -123.123, false, new Date("2020-12-12"), "1999-09-09", {}, "whatever", ""],
                 [-1, "not number", "False", new Date("invalid date"), "bad DOB", [], "whatever", ""],
             ],
-        });
+            {
+                header: [`A string`, `num`, `bool`, `date`, `date of birth`, `bad data`, `skip this`, `skip this too`],
+            }
+        );
         const data = parse(text, {
             header: {
                 "A string": { jsonName: "stringX" },

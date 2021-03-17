@@ -1,11 +1,11 @@
-export const isString = (f) => typeof f === "string";
-export const isNumber = (f) => typeof f === "number";
-export const isBoolean = (f) => typeof f === "boolean";
-export const isDate = (o) => o instanceof Date && !isNaN(o.valueOf());
+export const isString = (v) => typeof v === "string";
+export const isNumber = (v) => typeof v === "number";
+export const isBoolean = (v) => typeof v === "boolean";
+export const isDate = (v) => v instanceof Date && !isNaN(v.valueOf());
+export const isObject = (v) => v && typeof v === "object";
+export const isFunction = (v) => typeof v === "function";
 
-export const isFunction = (f) => typeof f === "function";
-
-export function parse(str, { header = false, escapeChar = "\\" } = {}) {
+export function parse(str, { header = true, escapeChar = "\\" } = {}) {
     const entries = [];
     let quote = false; // 'true' means we're inside a quoted field
     let newRow = false; // 'true' means we need to finish this line
@@ -85,33 +85,51 @@ export function parse(str, { header = false, escapeChar = "\\" } = {}) {
     });
 }
 
-export function generate({ header, rows, lineTerminator = "\n", escapeChar = "\\" }) {
-    if (!header) header = "";
-    else {
-        if (Array.isArray(header)) header = header.map((h) => (isString(h) && h.includes(",") ? `"${h}"` : h)).join();
-        if (!isString(header)) throw new Error("Header must be either string or array of strings");
-        header = header + lineTerminator;
+export function generate(rows, { header, lineTerminator = "\n", escapeChar = "\\" } = {}) {
+    if (header) {
+        if (isBoolean(header)) {
+            header = Array.from(rows.reduce((all, row) => new Set([...all, ...Object.keys(row)]), new Set()));
+        } else if (Array.isArray(header)) {
+            if (!header.every(isString)) throw new Error("If header is array all items must be strings");
+        } else if (isObject(header)) {
+            header = Object.entries(header)
+                .filter(([k, v]) => v)
+                .map(([k]) => k);
+        } else {
+            throw new Error("Header must be either boolean, or array, or object");
+        }
+
+        header = header.map((h) => {
+            h = h.replace(/"/g, escapeChar + '"');
+            return h.includes(",") ? `"${h}"` : h;
+        });
     }
 
+    function valueToString(v) {
+        if (v == null || v === "" || !((isNumber(v) && !isNaN(v)) || isString(v) || isDate(v) || isBoolean(v)))
+            return ""; // ignore bad data
+
+        v = isDate(v) ? v.toISOString() : String(v); // convert any kind of value to string
+        v = v.replace(/"/g, escapeChar + '"'); // Escape quote character
+        if (v.includes(",")) v = '"' + v + '"'; // Add quotes if value has commas
+        return v;
+    }
+
+    const textHeader = header ? header.join() + lineTerminator : "";
     return (
-        header +
+        textHeader +
         rows
-            .map((row) =>
-                row
-                    .map((v) => {
-                        if (
-                            v == null ||
-                            v === "" ||
-                            !((isNumber(v) && !isNaN(v)) || isString(v) || isDate(v) || isBoolean(v))
-                        )
-                            return ""; // ignore bad data
-                        v = isDate(v) ? v.toISOString() : String(v); // convert any kind of value to string
-                        v = v.replace(/"/g, escapeChar + '"'); // Escape quote character
-                        if (v.includes(",")) v = '"' + v + '"'; // Add quotes if value has commas
-                        return v;
-                    })
-                    .join()
-            )
+            .map((row, i) => {
+                if (Array.isArray(row)) {
+                    if (header && row.length !== header.length)
+                        throw new Error(`Each row array must have exactly ${header.length} items`);
+                    return row.map(valueToString).join();
+                }
+                if (isObject(row)) {
+                    return header.map((h) => valueToString(row[h])).join();
+                }
+                throw new Error(`Row ${i} must be either array or object`);
+            })
             .join(lineTerminator)
     );
 }
