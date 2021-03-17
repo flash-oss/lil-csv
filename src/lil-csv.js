@@ -1,18 +1,40 @@
+const isArray = Array.isArray;
 const isString = (v) => typeof v === "string";
 const isNumber = (v) => typeof v === "number";
 const isBoolean = (v) => typeof v === "boolean";
 const isDate = (v) => v instanceof Date && !isNaN(v.valueOf());
-const isObject = (v) => v && typeof v === "object";
+const isObject = (v) => v && typeof v === "object" && !isArray(v);
 const isFunction = (v) => typeof v === "function";
-// function getDeep(obj, path) {
-//     return path.split(".").reduce((result, curr) => (result == null ? result : result[curr]), obj);
-// }
-function setDeep(obj, path, value) {
+const getDeep = (obj, path) => path.split(".").reduce((result, curr) => (result == null ? result : result[curr]), obj);
+const setDeep = (obj, path, value) => {
     path.split(".").reduce((result, curr, index, paths) => {
         const newVal = index + 1 === paths.length ? value : {};
         return isObject(result[curr]) ? result[curr] : (result[curr] = newVal);
     }, obj);
-}
+};
+
+const mergeDeep = (target, ...sources) => {
+    if (!sources.length) return target;
+    const source = sources.shift();
+
+    if (isObject(target) && isObject(source)) {
+        for (const [key, value] of Object.entries(source)) {
+            if (isObject(value)) {
+                mergeDeep((target[key] = target[key] || {}), value);
+            } else {
+                target[key] = value;
+            }
+        }
+    }
+
+    return mergeDeep(target, ...sources);
+};
+
+const deepKeys = (obj, prefix) =>
+    Object.entries(obj).reduce((keys, [k, v]) => {
+        const newKey = prefix ? prefix + "." + k : k;
+        return keys.concat(isObject(v) ? deepKeys(v, newKey) : newKey);
+    }, []);
 
 export function parse(str, { header = true, escapeChar = "\\" } = {}) {
     const entries = [];
@@ -76,7 +98,7 @@ export function parse(str, { header = true, escapeChar = "\\" } = {}) {
     }
 
     // Auto-construct the headers (JSON objects keys) from the top most line of the file.
-    if (typeof header === "boolean") header = headerEntry.reduce((o, h) => ((o[h] = true), o), {});
+    if (isBoolean(header)) header = headerEntry.reduce((o, h) => ((o[h] = true), o), {});
 
     return entries.map((entry) => {
         const processedEntry = {};
@@ -96,48 +118,67 @@ export function parse(str, { header = true, escapeChar = "\\" } = {}) {
     });
 }
 
-export function generate(rows, { header, lineTerminator = "\n", escapeChar = "\\" } = {}) {
+export function generate(rows, { header = true, lineTerminator = "\n", escapeChar = "\\" } = {}) {
+    const serialise = (v) => {
+        v = v.replace(/"/g, escapeChar + '"'); // Escape quote character
+        return v.includes(",") ? '"' + v + '"' : v; // Add quotes if value has commas
+    };
+
+    const valueToString = (v) => {
+        if (v == null || v === "" || !((isNumber(v) && !isNaN(v)) || isString(v) || isDate(v) || isBoolean(v)))
+            return ""; // ignore bad data
+
+        v = isDate(v) ? v.toISOString() : String(v); // convert any kind of value to string
+        return serialise(v);
+    };
+
+    let detectedHeaders = null;
     if (header) {
         if (isBoolean(header)) {
-            header = Array.from(rows.reduce((all, row) => new Set([...all, ...Object.keys(row)]), new Set()));
-        } else if (Array.isArray(header)) {
-            if (!header.every(isString)) throw new Error("If header is array all items must be strings");
+            if (isObject(rows[0])) {
+                detectedHeaders = deepKeys(mergeDeep({}, ...rows.filter(isObject)));
+                if (detectedHeaders.length === 0) throw new Error("Bad header and rows");
+            } else {
+                if (!isArray(rows[0])) throw new Error("Can't auto detect header from rows");
+            }
+        } else if (isArray(header)) {
+            if (!header.length || !header.every(isString))
+                throw new Error("If header is array all items must be strings");
+            detectedHeaders = header;
         } else if (isObject(header)) {
-            header = Object.entries(header)
+            detectedHeaders = Object.entries(header)
                 .filter(([k, v]) => v)
                 .map(([k]) => k);
         } else {
             throw new Error("Header must be either boolean, or array, or object");
         }
-
-        header = header.map((h) => {
-            h = h.replace(/"/g, escapeChar + '"');
-            return h.includes(",") ? `"${h}"` : h;
-        });
     }
 
-    function valueToString(v) {
-        if (v == null || v === "" || !((isNumber(v) && !isNaN(v)) || isString(v) || isDate(v) || isBoolean(v)))
-            return ""; // ignore bad data
-
-        v = isDate(v) ? v.toISOString() : String(v); // convert any kind of value to string
-        v = v.replace(/"/g, escapeChar + '"'); // Escape quote character
-        if (v.includes(",")) v = '"' + v + '"'; // Add quotes if value has commas
-        return v;
-    }
-
-    const textHeader = header ? header.join() + lineTerminator : "";
+    const textHeader = detectedHeaders
+        ? detectedHeaders
+              .map((h) => {
+                  const dataHeader = isObject(header) ? header[h] : h;
+                  const newHeader = dataHeader.jsonName || (isString(dataHeader) ? dataHeader : h);
+                  return serialise(newHeader);
+              })
+              .join() + lineTerminator
+        : "";
     return (
         textHeader +
         rows
             .map((row, i) => {
-                if (Array.isArray(row)) {
-                    if (header && row.length !== header.length)
-                        throw new Error(`Each row array must have exactly ${header.length} items`);
+                if (isArray(row)) {
+                    if (detectedHeaders && row.length !== detectedHeaders.length)
+                        throw new Error(`Each row array must have exactly ${detectedHeaders.length} items`);
                     return row.map(valueToString).join();
                 }
                 if (isObject(row)) {
-                    return header.map((h) => valueToString(row[h])).join();
+                    if (!detectedHeaders) throw new Error("Unexpected row object");
+                    return detectedHeaders
+                        .map((h) => {
+                            return valueToString(getDeep(row, h));
+                        })
+                        .join();
                 }
                 throw new Error(`Row ${i} must be either array or object`);
             })

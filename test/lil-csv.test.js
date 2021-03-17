@@ -1,5 +1,4 @@
 import { parse, generate } from "../src/lil-csv";
-
 const assert = require("assert");
 
 describe("parse", () => {
@@ -124,7 +123,125 @@ describe("parse", () => {
 });
 
 describe("generate", () => {
-    it("should generate and parse back", () => {
+    it("should generate objects", () => {
+        const text = generate([
+            { foo: 1, bar: "baz" },
+            { foo: 2, bar: "too" },
+        ]);
+        assert.deepStrictEqual(
+            text,
+            `foo,bar
+1,baz
+2,too`
+        );
+    });
+
+    it("should generate with header", () => {
+        const text = generate(
+            [
+                ["here", " we go ", "false"],
+                ["with,comma", 'with " escaped quotes', "123"],
+                ["", "empty", ""],
+            ],
+            { header: [`Column`, `Second Column`, `else`] }
+        );
+        assert.deepStrictEqual(
+            text,
+            `Column,Second Column,else
+here, we go ,false
+"with,comma",with \\" escaped quotes,123
+,empty,`
+        );
+    });
+
+    it("should auto format some primitives", () => {
+        const text = generate([[new Date("2020-12-12"), 123.123, false]], {
+            header: [`Column`, `Second Column`, `else`],
+        });
+        assert.deepStrictEqual(
+            text,
+            `Column,Second Column,else
+2020-12-12T00:00:00.000Z,123.123,false`
+        );
+    });
+
+    it("should generate from deep objects", () => {
+        const text = generate([{ foo: { deep: { deeper: 1 } }, bar: { deep: 2, deep2: { more: 3 } } }]);
+        assert.deepStrictEqual(
+            text,
+            `foo.deep.deeper,bar.deep,bar.deep2.more
+1,2,3`
+        );
+    });
+
+    it("should generate from deep objects and rename headers", () => {
+        const rows = [
+            {
+                Column: "here",
+                deep: {
+                    Column2: " we go ",
+                    veryDeep: {
+                        Column3: "false",
+                    },
+                },
+            },
+            {
+                Column: "with,comma",
+                deep: {
+                    Column2: 'with " escaped quotes',
+                    veryDeep: {
+                        Column3: "123",
+                    },
+                },
+            },
+            {
+                Column: "",
+                deep: {
+                    Column2: "empty",
+                    veryDeep: {
+                        Column3: "",
+                    },
+                },
+            },
+        ];
+        const text = generate(rows, {
+            header: {
+                Column: true,
+                "deep.Column2": "Second Column",
+                "deep.veryDeep.Column3": "else",
+            },
+        });
+        assert.deepStrictEqual(
+            text,
+            `Column,Second Column,else
+here, we go ,false
+"with,comma",with \\" escaped quotes,123
+,empty,`
+        );
+    });
+
+    it("should ignore bad data", () => {
+        const text = generate([[null, undefined, {}, [], () => {}, NaN, "", new Map(), new Set()]], { header: false });
+        assert.deepStrictEqual(text, `,,,,,,,,`);
+    });
+
+    it("should throw when can't auto detect header", () => {
+        assert.throws(
+            () => generate([null]),
+            (err) => err.message === "Can't auto detect header from rows"
+        );
+    });
+
+    it("should throw if rows are unprocessable", () => {
+        assert.throws(
+            () => generate([{}]),
+            (err) => err.message === "Bad header and rows"
+        );
+    });
+});
+
+describe("generate + parse", () => {
+    it("should generate and parse back arrays", () => {
         const rows = parse(
             generate([
                 [`Column`, `Second Column`, `else`],
@@ -142,42 +259,15 @@ describe("generate", () => {
         ]);
     });
 
-    it("should generate with header", () => {
-        const rows = generate(
-            [
-                ["here", " we go ", "false"],
-                ["with,comma", 'with " escaped quotes', "123"],
-                ["", "empty", ""],
-            ],
-            { header: [`Column`, `Second Column`, `else`] }
-        );
-        assert.deepStrictEqual(
-            rows,
-            `Column,Second Column,else
-here, we go ,false
-"with,comma",with \\" escaped quotes,123
-,empty,`
-        );
+    it("should generate and parse back objects", () => {
+        const rows = [
+            { a: { deep: "X" }, b: "1" },
+            { a: { deep: "Y" }, b: "2" },
+        ];
+        const rows2 = parse(generate(rows));
+        assert.deepStrictEqual(rows2, rows);
     });
 
-    it("should auto format some primitives", () => {
-        const rows = generate([[new Date("2020-12-12"), 123.123, false]], {
-            header: [`Column`, `Second Column`, `else`],
-        });
-        assert.deepStrictEqual(
-            rows,
-            `Column,Second Column,else
-2020-12-12T00:00:00.000Z,123.123,false`
-        );
-    });
-
-    it("should ignore bad data", () => {
-        const rows = generate([[null, undefined, {}, [], () => {}, NaN, "", new Map(), new Set()]]);
-        assert.deepStrictEqual(rows, `,,,,,,,,`);
-    });
-});
-
-describe("generate + parse", () => {
     it("should work on fully customised options", () => {
         const text = generate(
             [
@@ -190,7 +280,7 @@ describe("generate + parse", () => {
         );
         const data = parse(text, {
             header: {
-                "A string": { jsonName: "stringX" },
+                "A string": "stringX",
                 num: { jsonName: "numberX", parse: (v) => (v && !Number.isNaN(Number(v)) ? Number(v) : "") },
                 bool: { jsonName: "booleanX", parse: (v) => Boolean(v && v !== "false") },
                 date: { jsonName: "dateX", parse: (v) => (isNaN(new Date(v).valueOf()) ? "" : new Date(v)) },
