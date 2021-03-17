@@ -1,9 +1,18 @@
-export const isString = (v) => typeof v === "string";
-export const isNumber = (v) => typeof v === "number";
-export const isBoolean = (v) => typeof v === "boolean";
-export const isDate = (v) => v instanceof Date && !isNaN(v.valueOf());
-export const isObject = (v) => v && typeof v === "object";
-export const isFunction = (v) => typeof v === "function";
+const isString = (v) => typeof v === "string";
+const isNumber = (v) => typeof v === "number";
+const isBoolean = (v) => typeof v === "boolean";
+const isDate = (v) => v instanceof Date && !isNaN(v.valueOf());
+const isObject = (v) => v && typeof v === "object";
+const isFunction = (v) => typeof v === "function";
+// function getDeep(obj, path) {
+//     return path.split(".").reduce((result, curr) => (result == null ? result : result[curr]), obj);
+// }
+function setDeep(obj, path, value) {
+    path.split(".").reduce((result, curr, index, paths) => {
+        const newVal = index + 1 === paths.length ? value : {};
+        return isObject(result[curr]) ? result[curr] : (result[curr] = newVal);
+    }, obj);
+}
 
 export function parse(str, { header = true, escapeChar = "\\" } = {}) {
     const entries = [];
@@ -73,13 +82,15 @@ export function parse(str, { header = true, escapeChar = "\\" } = {}) {
         const processedEntry = {};
         for (let col = 0; col < entry.length; col++) {
             const dataHeaderName = headerEntry[col];
-            if (!header[dataHeaderName]) continue; // We don't want this column
+            const dataHeader = header[dataHeaderName];
+            if (!dataHeader) continue; // We don't want this column
             let value = entry[col];
 
-            const parse = header[dataHeaderName].parse || header[dataHeaderName];
+            const parse = dataHeader.parse || dataHeader;
             if (isFunction(parse)) value = parse(value);
 
-            processedEntry[header[dataHeaderName].jsonName || dataHeaderName] = value;
+            let propName = dataHeader.jsonName || (isString(dataHeader) ? dataHeader : dataHeaderName);
+            setDeep(processedEntry, propName, value);
         }
         return processedEntry;
     });

@@ -3,7 +3,72 @@ import { parse, generate } from "../src/lil-csv";
 const assert = require("assert");
 
 describe("parse", () => {
-    it("should parse", () => {
+    it("should parse objects", () => {
+        const text = `Column,Second Column,else\rhere, we go ,false\r\n"with,comma","with \\" escaped quotes",123\n"",empty,
+`;
+        const rows = parse(text);
+        assert.deepStrictEqual(rows, [
+            { Column: "here", "Second Column": " we go ", else: "false" },
+            { Column: "with,comma", "Second Column": 'with " escaped quotes', else: "123" },
+            { Column: "", "Second Column": "empty", else: "" },
+        ]);
+    });
+
+    it("should parse objects and rename headers", () => {
+        const text = `Column,Second Column,else\rhere, we go ,false\r\n"with,comma","with \\" escaped quotes",123\n"",empty,
+`;
+        const rows = parse(text, {
+            header: { Column: true, "Second Column": { jsonName: "Column2" }, else: "Column3" },
+        });
+        assert.deepStrictEqual(rows, [
+            { Column: "here", Column2: " we go ", Column3: "false" },
+            { Column: "with,comma", Column2: 'with " escaped quotes', Column3: "123" },
+            { Column: "", Column2: "empty", Column3: "" },
+        ]);
+    });
+
+    it("should parse objects and rename headers deeply", () => {
+        const text = `Column,Second Column,else\rhere, we go ,false\r\n"with,comma","with \\" escaped quotes",123\n"",empty,
+`;
+        const rows = parse(text, {
+            header: {
+                Column: true,
+                "Second Column": { jsonName: "deep.Column2" },
+                else: "deep.veryDeep.Column3",
+            },
+        });
+        assert.deepStrictEqual(rows, [
+            {
+                Column: "here",
+                deep: {
+                    Column2: " we go ",
+                    veryDeep: {
+                        Column3: "false",
+                    },
+                },
+            },
+            {
+                Column: "with,comma",
+                deep: {
+                    Column2: 'with " escaped quotes',
+                    veryDeep: {
+                        Column3: "123",
+                    },
+                },
+            },
+            {
+                Column: "",
+                deep: {
+                    Column2: "empty",
+                    veryDeep: {
+                        Column3: "",
+                    },
+                },
+            },
+        ]);
+    });
+
+    it("should parse without header", () => {
         const text = `Column,Second Column,else\rhere, we go ,false\r\n"with,comma","with \\" escaped quotes",123\n"",empty,
 `;
         const rows = parse(text, { header: false });
