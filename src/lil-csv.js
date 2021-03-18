@@ -114,9 +114,9 @@ export function parse(str, { header = true, escapeChar = "\\" } = {}) {
             let value = entry[col];
 
             const parse = dataHeader.parse || dataHeader;
-            if (isFunction(parse)) value = parse(value);
+            if (isFunction(parse)) value = parse(value, entry);
 
-            let propName = dataHeader.jsonName || (isString(dataHeader) ? dataHeader : dataHeaderName);
+            let propName = dataHeader.newName || (isString(dataHeader) ? dataHeader : dataHeaderName);
             setDeep(processedEntry, propName, value);
         }
         return processedEntry;
@@ -163,7 +163,7 @@ export function generate(rows, { header = true, lineTerminator = "\n", escapeCha
         ? detectedHeaders
               .map((h) => {
                   const dataHeader = header[h] || h;
-                  const newHeader = dataHeader.jsonName || (isString(dataHeader) ? dataHeader : h);
+                  const newHeader = dataHeader.newName || (isString(dataHeader) ? dataHeader : h);
                   return serialiseString(newHeader);
               })
               .join() + lineTerminator
@@ -185,7 +185,7 @@ export function generate(rows, { header = true, lineTerminator = "\n", escapeCha
                             const dataHeader = header[h] || h;
                             let stringify = dataHeader.stringify || dataHeader;
                             if (!isFunction(stringify)) stringify = valueToString;
-                            return serialiseString(valueToString(stringify(getDeep(row, h))));
+                            return serialiseString(valueToString(stringify(getDeep(row, h), row)));
                         })
                         .join();
                 }

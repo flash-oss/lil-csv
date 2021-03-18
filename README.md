@@ -116,12 +116,12 @@ const rows = parse(text, {
   header: {
     name: "fullName",
     "date of birth": {
-      jsonName: "dob",
+      newName: "dob",
       parse: (v) => (isNaN(new Date(v).valueOf()) ? null : v),
     },
     "address.street": String,
     "address.country": {
-      jsonName: "country",
+      newName: "country",
       parse: (v) => countryLookup[v.toUpperCase()] || null,
     },
     "address.postcode": (v) => (v && v.match && v.match(/^\d{4}$/) ? v : null),
@@ -182,12 +182,12 @@ const text = generate(rows, {
   header: {
     fullName: "name",
     dob: {
-      jsonName: "date of birth",
+      newName: "date of birth",
       stringify: (v) => (!v || isNaN(new Date(v).valueOf()) ? "N/A" : v),
     },
     "address.street": String,
     country: {
-      jsonName: "address.country",
+      newName: "address.country",
       stringify: (v) => countryReverseLookup[v.toUpperCase()] || "N/A",
     },
     "address.postcode": (v) => (v && v.match && v.match(/^\d{4}$/) ? v : "N/A"),
@@ -202,85 +202,76 @@ Lily Noa,1992-12-26,"7 Blue Bay, Berala",AU,2222`
 );
 ```
 
-Process rows to JSON objects:
+#### Customise data parsing
+
+Parse each column differently:
 
 ```js
-import { parse } from "lil-csv";
-
-const text = `Implicit skip,Explicit skip,As is,Definitelly a string,rename me,a Boolean,a date,dob,And a Number
-skipping this cell,skipping this one as well,as is data,"data, with, commas",renamed column data,false,2020-12-12T23:59:59Z,1999-09-09,123.123`;
+const text = `name,isCompany,createdAt,balance
+John Noa,false,2021-03-18T03:38:12.641Z,9000.12
+Acme Inc,true,2021-11-22,1000150.10`;
 
 const rows = parse(text, {
-  headers: {
-    "Explicit skip": false,
-    "As is": true,
-    "Definitelly a string": String,
-    "rename me": { jsonName: "newName" },
-    "a Boolean": { parse: (v) => Boolean(v && v !== "false") },
-    "a date": {
-      parse: (v) => (isNaN(new Date(v).valueOf()) ? "" : new Date(v)),
-      jsonName: "date",
-    },
-    dob: {
-      parse: (v) =>
-        isNaN(new Date(v).valueOf())
-          ? ""
-          : new Date(v).toISOString().substr(0, 10),
-    },
-    "And a Number": {
-      parse: (v) => (v && !Number.isNaN(Number(v)) ? Number(v) : ""),
-    },
+  header: {
+    name: String,
+    isCompany: (v) => v !== "false",
+    createdAt: (v) => new Date(v),
+    balance: Number,
   },
 });
 
-console.log(rows);
-// [
-//     {
-//         'As is': 'as is data',
-//         'Definitelly a string': 'data, with, commas',
-//         newName: 'renamed column data',
-//         'a Boolean': false,
-//         date: [Date: 2020-12-12T23:59:59.000Z],
-//         dob: "1999-09-09",
-//         'And a Number': 123.123
-//     }
-// ]
+assert.deepStrictEqual(rows, [
+  {
+    name: "John Noa",
+    isCompany: false,
+    createdAt: new Date("2021-03-18T03:38:12.641Z"),
+    balance: 9000.12,
+  },
+  {
+    name: "Acme Inc",
+    isCompany: true,
+    createdAt: new Date("2021-11-22"),
+    balance: 1000150.1,
+  },
+]);
 ```
 
-### Generate CSV
+#### Customise data serialisation
 
-Simple string without a header:
+Stringify each column differently:
 
 ```js
-import { generate } from "lil-csv";
-
-const data = [
-  ["Column 1", "Some,other", "Boolean"],
-  ["text data", "data, with, commas", "false"],
+const rows = [
+  {
+    name: "John Noa",
+    isCompany: false,
+    createdAt: new Date("2021-03-18T03:38:12.641Z"),
+    balance: 9000.12,
+  },
+  {
+    name: "Acme Inc",
+    isCompany: true,
+    createdAt: new Date("2021-11-22"),
+    balance: 1000150.1,
+  },
 ];
-const text = generate({ rows: data });
-console.log(text);
-// Column 1,"Some,other",Boolean
-// text data,"data, with, commas",false
-```
 
-Complex data with a header:
-
-```js
-import { generate } from "lil-csv";
-
-const text = generate({
-  header: [`A string`, `num`, `bool`, `date`, `date of birth`, `bad data`],
-  rows: [
-    ["my str", 123.123, false, new Date("2020-12-12"), "1999-09-09", {}],
-    [-1, "not number", "False", new Date("invalid date"), "bad DOB", []],
-  ],
+const text = generate(rows, {
+  header: {
+    name: String,
+    isCompany: String,
+    createdAt: (v, entry) =>
+      new Date(v).toISOString().substr(0, entry.isCompany ? 10 : 100),
+    balance: (v) => v.toFixed(2),
+  },
 });
 
-console.log(text);
-// A string,num,bool,date,date of birth,bad data
-// my str,123.123,false,2020-12-12T00:00:00.000Z,1999-09-09,
-// -1,not number,False,,bad DOB,
+assert.deepStrictEqual(
+  text,
+  `name,isCompany,createdAt,balance
+John Noa,false,2021-03-18T03:38:12.641Z,9000.12
+Acme Inc,true,2021-11-22,1000150.10`
+);
 ```
 
 ## API
@@ -288,14 +279,36 @@ console.log(text);
 ### `parse(text, [options = { header: true, escapeChar: "\\" }])`
 
 - `text` - String, the string to parse.
-- `options` - Object, optional parsing options.
+- `options` - Object, optional parsing settings.
   - `options.escapeChar` - String character, the escape character used within that CSV.
   - `options.header` - Boolean, or Array of string, or Object. Default is `true`.
     - Boolean
       - `true` - create JSON objects from CSV rows. Assume first row of the text is a header, would be used as object keys.
       - `false` - create string arrays from CSV rows.
     - Array - create JSON objects from CSV rows. The array would be used as object keys.
-    - Object - create JSON objects from CSV rows. Object keys - CSV header name, Object values - either string or Object.
+    - Object - create JSON objects from CSV rows.
+      - Object keys - CSV header name, Object values - either string, of function, or Object.
       - value is String - rename CSV header. E.g. `"User First Name": "user.firstName"`
-      - `header[].parse` - use this function to deserialize a CSV cell to a value. E.g. convert "2020-12-12" string to a Date.
-      - `header[].jsonName` - rename CSV header. E.g. `jsonName: "user.firstName"`
+      - value is Function - use this function to deserialize a CSV cell to a value. E.g. convert "2020-12-12" string to a Date.
+      - value is Object - setting for each column name.
+        - `header[].parse` - use this function to deserialize a CSV cell to a value. E.g. convert "2020-12-12" string to a Date.
+        - `header[].newName` - rename CSV header. E.g. `"User First Name": "user.firstName"`
+
+### `generate(rows, [options = { header: true, escapeChar: "\\", lineTerminator: "\n" }])`
+
+- `rows` - array of arrays. The data to generate the CSV from. Each row must be euther array of object.
+- `options` - Object, optional settings.
+  - `options.escapeChar` - String character, the escape character used within that CSV.
+  - `options.lineTerminator` - String character, the new line character used within that CSV.
+  - `options.header` - Boolean, or Array of string, or Object. Default is `true`.
+    - Boolean
+      - `true` - autodetect column names (header) from the `rows`. If `rows` data are objects, then keys would be the column names. If `rows` are arrays, then the first row is assumed to be the header.
+      - `false` - generate CSV from `rows` without any column names (header).
+    - Array - array of strings to override all column names. If `rows` are objects, then each column name must match obejct keys.
+    - Object - generate CSV from these columns **ONLY**.
+      - Object keys - the only column names to be saved in the CSV file, Object values - either string, of function, or Object.
+      - value is String - rename CSV header. E.g. `"User First Name": "user.firstName"`
+      - value is Function - use this function to deserialise a CSV cell to a value. E.g. convert "2020-12-12" string to a Date.
+      - value is Object - setting for each column name.
+        - `header[].parse` - use this function to stringify a CSV cell. E.g. convert Date to "2020-12-12" string.
+        - `header[].newName` - rename CSV header. E.g. `"user.firstName": "User First Name"`

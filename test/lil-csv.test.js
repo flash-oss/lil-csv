@@ -17,7 +17,7 @@ describe("parse", () => {
         const text = `Column,Second Column,else\rhere, we go ,false\r\n"with,comma","with \\" escaped quotes",123\n"",empty,
 `;
         const rows = parse(text, {
-            header: { Column: true, "Second Column": { jsonName: "Column2" }, else: "Column3" },
+            header: { Column: true, "Second Column": { newName: "Column2" }, else: "Column3" },
         });
         assert.deepStrictEqual(rows, [
             { Column: "here", Column2: " we go ", Column3: "false" },
@@ -32,7 +32,7 @@ describe("parse", () => {
         const rows = parse(text, {
             header: {
                 Column: true,
-                "Second Column": { jsonName: "deep.Column2" },
+                "Second Column": { newName: "deep.Column2" },
                 else: "deep.veryDeep.Column3",
             },
         });
@@ -92,7 +92,7 @@ describe("parse", () => {
             header: {
                 asIs: true,
                 stringColumn: String,
-                "boolean column": { parse: (v) => Boolean(v && v !== "false"), jsonName: "booleanColumn" },
+                "boolean column": { parse: (v) => Boolean(v && v !== "false"), newName: "booleanColumn" },
                 " number column ": { parse: (v) => (v && !Number.isNaN(Number(v)) ? Number(v) : "") },
             },
         });
@@ -281,14 +281,14 @@ describe("generate + parse", () => {
         const data = parse(text, {
             header: {
                 "A string": "stringX",
-                num: { jsonName: "numberX", parse: (v) => (v && !Number.isNaN(Number(v)) ? Number(v) : "") },
-                bool: { jsonName: "booleanX", parse: (v) => Boolean(v && v !== "false") },
-                date: { jsonName: "dateX", parse: (v) => (isNaN(new Date(v).valueOf()) ? "" : new Date(v)) },
+                num: { newName: "numberX", parse: (v) => (v && !Number.isNaN(Number(v)) ? Number(v) : "") },
+                bool: { newName: "booleanX", parse: (v) => Boolean(v && v !== "false") },
+                date: { newName: "dateX", parse: (v) => (isNaN(new Date(v).valueOf()) ? "" : new Date(v)) },
                 "date of birth": {
-                    jsonName: "DOB",
+                    newName: "DOB",
                     parse: (v) => (isNaN(new Date(v).valueOf()) ? "" : new Date(v).toISOString().substr(0, 10)),
                 },
-                "bad data": { jsonName: "badData" },
+                "bad data": { newName: "badData" },
                 "skip this": false,
             },
         });
