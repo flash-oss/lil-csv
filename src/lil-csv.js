@@ -5,15 +5,19 @@ const isBoolean = (v) => typeof v === "boolean";
 const isDate = (v) => v instanceof Date && !isNaN(v.valueOf());
 const isObject = (v) => v && typeof v === "object" && !isArray(v);
 const isFunction = (v) => typeof v === "function";
-const getDeep = (obj, path) => path.split(".").reduce((result, curr) => (result == null ? result : result[curr]), obj);
-const setDeep = (obj, path, value) => {
+
+function getDeep(obj, path) {
+    return path.split(".").reduce((result, curr) => (result == null ? result : result[curr]), obj);
+}
+
+function setDeep(obj, path, value) {
     path.split(".").reduce((result, curr, index, paths) => {
         const newVal = index + 1 === paths.length ? value : {};
         return isObject(result[curr]) ? result[curr] : (result[curr] = newVal);
     }, obj);
-};
+}
 
-const mergeDeep = (target, ...sources) => {
+function mergeDeep(target, ...sources) {
     if (!sources.length) return target;
     const source = sources.shift();
 
@@ -28,13 +32,14 @@ const mergeDeep = (target, ...sources) => {
     }
 
     return mergeDeep(target, ...sources);
-};
+}
 
-const deepKeys = (obj, prefix) =>
-    Object.entries(obj).reduce((keys, [k, v]) => {
+function keysDeep(obj, prefix) {
+    return Object.entries(obj).reduce((keys, [k, v]) => {
         const newKey = prefix ? prefix + "." + k : k;
-        return keys.concat(isObject(v) ? deepKeys(v, newKey) : newKey);
+        return keys.concat(isObject(v) ? keysDeep(v, newKey) : newKey);
     }, []);
+}
 
 export function parse(str, { header = true, escapeChar = "\\" } = {}) {
     const entries = [];
@@ -119,24 +124,24 @@ export function parse(str, { header = true, escapeChar = "\\" } = {}) {
 }
 
 export function generate(rows, { header = true, lineTerminator = "\n", escapeChar = "\\" } = {}) {
-    const serialise = (v) => {
+    function serialiseString(v) {
         v = v.replace(/"/g, escapeChar + '"'); // Escape quote character
         return v.includes(",") ? '"' + v + '"' : v; // Add quotes if value has commas
-    };
+    }
 
-    const valueToString = (v) => {
+    function valueToString(v) {
         if (v == null || v === "" || !((isNumber(v) && !isNaN(v)) || isString(v) || isDate(v) || isBoolean(v)))
             return ""; // ignore bad data
 
         v = isDate(v) ? v.toISOString() : String(v); // convert any kind of value to string
-        return serialise(v);
-    };
+        return v;
+    }
 
     let detectedHeaders = null;
     if (header) {
         if (isBoolean(header)) {
             if (isObject(rows[0])) {
-                detectedHeaders = deepKeys(mergeDeep({}, ...rows.filter(isObject)));
+                detectedHeaders = keysDeep(mergeDeep({}, ...rows.filter(isObject)));
                 if (detectedHeaders.length === 0) throw new Error("Bad header and rows");
             } else {
                 if (!isArray(rows[0])) throw new Error("Can't auto detect header from rows");
@@ -157,9 +162,9 @@ export function generate(rows, { header = true, lineTerminator = "\n", escapeCha
     const textHeader = detectedHeaders
         ? detectedHeaders
               .map((h) => {
-                  const dataHeader = isObject(header) ? header[h] : h;
+                  const dataHeader = header[h] || h;
                   const newHeader = dataHeader.jsonName || (isString(dataHeader) ? dataHeader : h);
-                  return serialise(newHeader);
+                  return serialiseString(newHeader);
               })
               .join() + lineTerminator
         : "";
@@ -170,13 +175,17 @@ export function generate(rows, { header = true, lineTerminator = "\n", escapeCha
                 if (isArray(row)) {
                     if (detectedHeaders && row.length !== detectedHeaders.length)
                         throw new Error(`Each row array must have exactly ${detectedHeaders.length} items`);
-                    return row.map(valueToString).join();
+                    return row.map((v) => serialiseString(valueToString(v))).join();
                 }
                 if (isObject(row)) {
                     if (!detectedHeaders) throw new Error("Unexpected row object");
+
                     return detectedHeaders
                         .map((h) => {
-                            return valueToString(getDeep(row, h));
+                            const dataHeader = header[h] || h;
+                            let stringify = dataHeader.stringify || dataHeader;
+                            if (!isFunction(stringify)) stringify = valueToString;
+                            return serialiseString(valueToString(stringify(getDeep(row, h))));
                         })
                         .join();
                 }
