@@ -86,14 +86,15 @@ describe("parse", () => {
     });
 
     it("should parse headers", () => {
-        const text = `skip me,asIs,stringColumn,boolean column, number column \r\nskipping this data,"as is",bla bla,false,123.123
+        const text = `missing data,skip me,asIs,stringColumn,boolean column, number column \r\n,skipping this data,"as is",bla bla,false,123.123
 `;
         const rows = parse(text, {
             header: {
                 asIs: true,
                 stringColumn: String,
                 "boolean column": { parse: (v) => Boolean(v && v !== "false"), newName: "booleanColumn" },
-                " number column ": { parse: (v) => (v && !Number.isNaN(Number(v)) ? Number(v) : "") },
+                " number column ": (v) => (v && !Number.isNaN(Number(v)) ? Number(v) : ""),
+                "missing data": (v) => v || undefined,
             },
         });
         assert.deepStrictEqual(rows, [

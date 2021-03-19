@@ -116,8 +116,10 @@ export function parse(str, { header = true, escapeChar = "\\" } = {}) {
             const parse = dataHeader.parse || dataHeader;
             if (isFunction(parse)) value = parse(value, entry);
 
-            let propName = dataHeader.newName || (isString(dataHeader) ? dataHeader : dataHeaderName);
-            setDeep(processedEntry, propName, value);
+            if (value !== undefined) {
+                let propName = dataHeader.newName || (isString(dataHeader) ? dataHeader : dataHeaderName);
+                setDeep(processedEntry, propName, value);
+            }
         }
         return processedEntry;
     });
