@@ -223,3 +223,139 @@ Acme Inc,true,2021-11-22,1000150.10`
         );
     });
 });
+
+describe("real world data", () => {
+    it("should parse and generate back and forth", () => {
+        const parseNumber = (v) => (v && !Number.isNaN(Number(v)) ? Number(v) : undefined);
+        const parseDate = (v) => (isNaN(new Date(v).valueOf()) ? undefined : new Date(v).toISOString().substr(0, 10));
+        // const parseDateTime = (v) => (isNaN(new Date(v).valueOf()) ? "" : new Date(v));
+        const parseBoolean = (v) => Boolean(v && v !== "false");
+        const stringifyMoney = (v) => v && v.toFixed && v.toFixed(2);
+
+        const header = [
+            { text: "Amount", value: "amount", parse: parseNumber, stringify: stringifyMoney },
+            { text: "Ext. ID", value: "externalId" },
+            { text: "Ext. Ref.", value: "externalReference" },
+
+            { text: "Sender is company", value: "sender.isCompany", parse: parseBoolean },
+            { text: "Sender First name", value: "sender.firstName" },
+            { text: "Sender Middle name", value: "sender.middleName" },
+            { text: "Sender Last name", value: "sender.lastName" },
+            { text: "Sender Company name", value: "sender.companyName" },
+            { text: "Sender DOB", value: "sender.dob", parse: parseDate },
+            { text: "Sender Email", value: "sender.email" },
+            { text: "Sender Mobile", value: "sender.mobile" },
+
+            { text: "Sender Country", value: "sender.address.country" },
+            { text: "Sender Building", value: "sender.address.building" },
+            { text: "Sender Street", value: "sender.address.street" },
+            { text: "Sender Suburb", value: "sender.address.suburb" },
+            { text: "Sender State", value: "sender.address.state" },
+            { text: "Sender Post code", value: "sender.address.postcode" },
+
+            { text: "Recipient Acc#", value: "recipient.accountNo" },
+            { text: "Recipient BSB", value: "recipient.bsb" },
+            { text: "Recipient is company", value: "recipient.isCompany", parse: parseBoolean },
+            { text: "Recipient First name", value: "recipient.firstName" },
+            { text: "Recipient Middle name", value: "recipient.middleName" },
+            { text: "Recipient Last name", value: "recipient.lastName" },
+            { text: "Recipient Company name", value: "recipient.companyName" },
+            { text: "Recipient Email", value: "recipient.email" },
+            { text: "Recipient Mobile", value: "recipient.mobile" },
+
+            { text: "Recipient Country", value: "recipient.address.country" },
+            { text: "Recipient Building", value: "recipient.address.building" },
+            { text: "Recipient Street", value: "recipient.address.street" },
+            { text: "Recipient Suburb", value: "recipient.address.suburb" },
+            { text: "Recipient State", value: "recipient.address.state" },
+            { text: "Recipient Post code", value: "recipient.address.postcode" },
+        ];
+
+        const exampleRows = [
+            {
+                amount: 1,
+                externalId: "abc_222",
+                externalReference: "INV #000123",
+                sender: {
+                    address: {
+                        country: "UK",
+                        street: "10 Downing St",
+                        suburb: "LONDON",
+                        postcode: "SW1A 2AA",
+                    },
+                    isCompany: true,
+                    companyName: "ACME UK LTD",
+                    email: "andysender@example.com",
+                    mobile: "+44 7911123456",
+                },
+                recipient: {
+                    address: {
+                        country: "AU",
+                        building: "",
+                        street: "Apt 11/20 Bligh St",
+                        suburb: "Sydney",
+                        state: "NSW",
+                        postcode: "2000",
+                    },
+                    bsb: "032085",
+                    accountNo: "505273",
+                    isCompany: true,
+                    companyName: "Acme Pty Ltd",
+                    mobile: "+61 422334455",
+                    email: "nicrecipient@example.com",
+                },
+            },
+            {
+                amount: 1.51,
+                sender: {
+                    address: {
+                        country: "AU",
+                        building: "",
+                        street: "47 Wesley St",
+                        suburb: "Eleanora Heights",
+                        state: "NSW",
+                        postcode: "2101",
+                    },
+                    isCompany: false,
+                    firstName: "Mick",
+                    lastName: "Dundee",
+                    dob: "1999-12-12",
+                    email: "bobsender@example.com",
+                },
+                recipient: {
+                    address: {
+                        country: "AU",
+                        street: "Apt 12/33 Ultimo St",
+                        suburb: "Sydney",
+                        state: "NSW",
+                        postcode: "2000",
+                    },
+                    bsb: "083092",
+                    accountNo: "188101982",
+                    isCompany: false,
+                    firstName: "Helen",
+                    middleName: "Andrew",
+                    lastName: "Johnson",
+                    mobile: "+61 400334400",
+                    email: "helenrecipient@example.com",
+                },
+            },
+        ];
+
+        const generatingHeader = header.reduce(
+            (result, { text, value, stringify }) => Object.assign(result, { [value]: { newName: text, stringify } }),
+            {}
+        );
+        const generated = generate(exampleRows, { header: generatingHeader });
+
+        const parsingHeader = header.reduce(
+            (result, { text, value, parse }) => Object.assign(result, { [text]: { newName: value, parse } }),
+            {}
+        );
+        const parsed = parse(generated, { header: parsingHeader });
+
+        const generated2 = generate(parsed, { header: generatingHeader });
+
+        assert.strictEqual(generated2, generated);
+    });
+});
