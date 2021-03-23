@@ -269,6 +269,18 @@ describe("generate + parse", () => {
         assert.deepStrictEqual(rows2, rows);
     });
 
+    it("should wrap strings", () => {
+        const rows = [{ a: { deep: "X" }, b: `1,"bla",2` }];
+        const text = generate(rows, { wrapStrings: true });
+        assert.deepStrictEqual(
+            text,
+            `"a.deep","b"
+"X","1,\\"bla\\",2"`
+        );
+        const rows2 = parse(generate(rows));
+        assert.deepStrictEqual(rows2, rows);
+    });
+
     it("should work on fully customised options", () => {
         const text = generate(
             [

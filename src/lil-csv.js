@@ -125,10 +125,10 @@ export function parse(str, { header = true, escapeChar = "\\" } = {}) {
     });
 }
 
-export function generate(rows, { header = true, lineTerminator = "\n", escapeChar = "\\" } = {}) {
+export function generate(rows, { header = true, lineTerminator = "\n", escapeChar = "\\", wrapStrings = false } = {}) {
     function serialiseString(v) {
         v = v.replace(/"/g, escapeChar + '"'); // Escape quote character
-        return v.includes(",") ? '"' + v + '"' : v; // Add quotes if value has commas
+        return wrapStrings || v.includes(",") ? '"' + v + '"' : v; // Add quotes if value has commas
     }
 
     function valueToString(v) {
