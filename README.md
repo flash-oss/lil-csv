@@ -213,7 +213,7 @@ Acme Inc,true,2021-11-22,1000150.10`;
 
 const rows = parse(text, {
   header: {
-    name: String,
+    "*": String, // Do not skip unknown headers, instead parse them as String
     isCompany: (v) => v !== "false",
     createdAt: (v) => new Date(v),
     balance: Number,
@@ -293,6 +293,7 @@ Acme Inc,true,2021-11-22,1000150.10`
       - value is Object - setting for each column name.
         - `header[].parse` - use this function to deserialize a CSV cell to a value. E.g. convert "2020-12-12" string to a Date.
         - `header[].newName` - rename CSV header. E.g. `"User First Name": "user.firstName"`
+      - key is `"*"`, value is used as a default column parser for unknown columns.
 
 ### `generate(rows, [options = { header: true, escapeChar: "\\", lineTerminator: "\n" }])`
 

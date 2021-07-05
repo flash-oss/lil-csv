@@ -104,12 +104,13 @@ export function parse(str, { header = true, escapeChar = "\\" } = {}) {
 
     // Auto-construct the headers (JSON objects keys) from the top most line of the file.
     if (isBoolean(header)) header = headerEntry.reduce((o, h) => ((o[h] = true), o), {});
+    const defaultDataHeader = header["*"];
 
     return entries.map((entry) => {
         const processedEntry = {};
         for (let col = 0; col < entry.length; col++) {
             const dataHeaderName = headerEntry[col];
-            const dataHeader = header[dataHeaderName];
+            const dataHeader = header[dataHeaderName] || defaultDataHeader;
             if (!dataHeader) continue; // We don't want this column
             let value = entry[col];
 

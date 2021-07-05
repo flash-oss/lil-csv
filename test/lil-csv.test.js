@@ -121,6 +121,20 @@ describe("parse", () => {
             (err) => err.message === "Can't parse CSV as data. Some headers have same name."
         );
     });
+
+    it("should use '*' column header as 'default' parsing function", () => {
+        const text = `asIs,stringColumn,boolean column, number column \r\n"as is",bla bla,false,123.123
+`;
+        const rows = parse(text, {
+            header: {
+                "*": String,
+                "boolean column": (v) => v !== "false",
+            },
+        });
+        assert.deepStrictEqual(rows, [
+            { asIs: "as is", stringColumn: "bla bla", "boolean column": false, " number column ": "123.123" },
+        ]);
+    });
 });
 
 describe("generate", () => {
