@@ -41,6 +41,12 @@ function keysDeep(obj, prefix) {
     }, []);
 }
 
+/**
+ * @param str {String} The CSV file contents.
+ * @param [header=true] {Boolean | String[] | Object.<string,String> | Object.<string,Function> | Object.<string,{[parse]:Function,[newName]:String}>}
+ * @param [escapeChar="\\"] {String}
+ * @return {Object[] | String[] | *[]} The parsed strings, objects, values of all kind(s).
+ */
 export function parse(str, { header = true, escapeChar = "\\" } = {}) {
     const entries = [];
     let quote = false; // 'true' means we're inside a quoted field
@@ -108,7 +114,7 @@ export function parse(str, { header = true, escapeChar = "\\" } = {}) {
         const processedEntry = {};
         for (let col = 0; col < entry.length; col++) {
             const dataHeaderName = headerEntry[col];
-            const dataHeader = header[dataHeaderName] || defaultDataHeader;
+            const dataHeader = isArray(header) ? header[col] : header[dataHeaderName] || defaultDataHeader;
             if (!dataHeader) continue; // We don't want this column
             let value = entry[col];
 
@@ -124,6 +130,15 @@ export function parse(str, { header = true, escapeChar = "\\" } = {}) {
     });
 }
 
+/**
+ * Generate CSV from your data (arrays or objects) to a string.
+ * @param rows {Object[] | String[]}
+ * @param [header=true] {Boolean | String[] | Object.<string,Boolean> | Object.<string,String> | Object.<string,Function> | Object.<string,{[stringify]:Function,[newName]:String}>}
+ * @param [lineTerminator="\n"] {String}
+ * @param [escapeChar="\\"] {String}
+ * @param [wrapStrings=false] {Boolean}
+ * @return {String} The CSV file contents.
+ */
 export function generate(rows, { header = true, lineTerminator = "\n", escapeChar = "\\", wrapStrings = false } = {}) {
     function serialiseString(v) {
         v = v.replace(/"/g, escapeChar + '"'); // Escape quote character
@@ -138,6 +153,9 @@ export function generate(rows, { header = true, lineTerminator = "\n", escapeCha
         return v;
     }
 
+    /**
+     * @type {String[]|null}
+     */
     let detectedHeaders = null;
     if (header) {
         if (isBoolean(header)) {

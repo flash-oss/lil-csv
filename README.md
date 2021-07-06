@@ -305,11 +305,11 @@ Acme Inc,true,2021-11-22,1000150.10`
     - Boolean
       - `true` - autodetect column names (header) from the `rows`. If `rows` data are objects, then keys would be the column names. If `rows` are arrays, then the first row is assumed to be the header.
       - `false` - generate CSV from `rows` without any column names (header).
-    - Array - array of strings to override all column names. If `rows` are objects, then each column name must match obejct keys.
+    - Array - array of strings to override all column names. If `rows` are objects, then each column name must match object keys.
     - Object - generate CSV from these columns **ONLY**.
       - Object keys - the only column names to be saved in the CSV file, Object values - either string, of function, or Object.
-      - value is String - rename CSV header. E.g. `"User First Name": "user.firstName"`
+      - value is String - rename CSV header. E.g. `"user.firstName": "User First Name"`
       - value is Function - use this function to deserialise a CSV cell to a value. E.g. convert "2020-12-12" string to a Date.
       - value is Object - setting for each column name.
-        - `header[].parse` - use this function to stringify a CSV cell. E.g. convert Date to "2020-12-12" string.
+        - `header[].stringify` - use this function to stringify a CSV cell. E.g. convert Date to "2020-12-12" string.
         - `header[].newName` - rename CSV header. E.g. `"user.firstName": "User First Name"`
