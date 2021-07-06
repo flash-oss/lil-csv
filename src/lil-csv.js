@@ -44,7 +44,6 @@ function keysDeep(obj, prefix) {
 export function parse(str, { header = true, escapeChar = "\\" } = {}) {
     const entries = [];
     let quote = false; // 'true' means we're inside a quoted field
-    let newRow = false; // 'true' means we need to finish this line
 
     // Iterate over each character, keep track of current row and column (of the returned array)
     for (let row = 0, col = 0, c = 0; c < str.length; c++) {
@@ -79,7 +78,6 @@ export function parse(str, { header = true, escapeChar = "\\" } = {}) {
             if (cc === "\n" || cc === "\r") {
                 ++row;
                 col = 0;
-                newRow = false;
 
                 // If it's a lineTerminator (CRLF), skip the next character
                 // and move on to the next row and move to column 0 of that new row
