@@ -1,4 +1,4 @@
-import { generate } from "../src/lil-csv";
+import { generate, parse } from "../src/lil-csv";
 const assert = require("assert");
 
 describe("generate", () => {
@@ -115,6 +115,27 @@ here, we go ,false
         assert.throws(
             () => generate([{}]),
             (err) => err.message === "Bad header and rows"
+        );
+    });
+
+    it("should use '*' column header as 'default' stringify function", () => {
+        const rows = [
+            { firstName: "John", lastName: "Smith", dob: "1999-01-15T00:00:00.000Z", price: 123.0, completed: true },
+            { firstName: "Alice", lastName: "Dwarf", dob: "1991-11-24T00:00:00.000Z", price: 123.0, completed: false },
+        ];
+        const text = generate(rows, {
+            header: {
+                "*": String,
+                dob: (v) => (v ? new Date(v).toISOString().substr(0, 10) : ""),
+                price: (v) => (isNaN(v) ? "" : Number(v).toFixed(2)),
+                completed: (v) => (v ? "Y" : "N"),
+            },
+        });
+        assert.deepStrictEqual(
+            text,
+            `firstName,lastName,dob,price,completed
+John,Smith,1999-01-15,123.00,Y
+Alice,Dwarf,1991-11-24,123.00,N`
         );
     });
 });

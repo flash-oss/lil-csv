@@ -1,10 +1,10 @@
-const isArray = Array.isArray;
-const isString = (v) => typeof v === "string";
-const isNumber = (v) => typeof v === "number";
-const isBoolean = (v) => typeof v === "boolean";
-const isDate = (v) => v instanceof Date && !isNaN(v.valueOf());
-const isObject = (v) => v && typeof v === "object" && !isArray(v);
-const isFunction = (v) => typeof v === "function";
+let isArray = Array.isArray;
+let isString = (v) => typeof v === "string";
+let isNumber = (v) => typeof v === "number";
+let isBoolean = (v) => typeof v === "boolean";
+let isDate = (v) => v instanceof Date && !isNaN(v.valueOf());
+let isObject = (v) => v && typeof v === "object" && !isArray(v);
+let isFunction = (v) => typeof v === "function";
 
 function getDeep(obj, path) {
     return path.split(".").reduce((result, curr) => (result == null ? result : result[curr]), obj);
@@ -12,17 +12,17 @@ function getDeep(obj, path) {
 
 function setDeep(obj, path, value) {
     path.split(".").reduce((result, curr, index, paths) => {
-        const newVal = index + 1 === paths.length ? value : {};
+        let newVal = index + 1 === paths.length ? value : {};
         return isObject(result[curr]) ? result[curr] : (result[curr] = newVal);
     }, obj);
 }
 
 function mergeDeep(target, ...sources) {
     if (!sources.length) return target;
-    const source = sources.shift();
+    let source = sources.shift();
 
     if (isObject(target) && isObject(source)) {
-        for (const [key, value] of Object.entries(source)) {
+        for (let [key, value] of Object.entries(source)) {
             if (isObject(value)) {
                 mergeDeep((target[key] = target[key] || {}), value);
             } else {
@@ -36,7 +36,7 @@ function mergeDeep(target, ...sources) {
 
 function keysDeep(obj, prefix) {
     return Object.entries(obj).reduce((keys, [k, v]) => {
-        const newKey = prefix ? prefix + "." + k : k;
+        let newKey = prefix ? prefix + "." + k : k;
         return keys.concat(isObject(v) ? keysDeep(v, newKey) : newKey);
     }, []);
 }
@@ -48,7 +48,7 @@ function keysDeep(obj, prefix) {
  * @return {Object[] | String[] | *[]} The parsed strings, objects, values of all kind(s).
  */
 export function parse(str, { header = true, escapeChar = "\\" } = {}) {
-    const entries = [];
+    let entries = [];
     let quote = false; // 'true' means we're inside a quoted field
 
     // Iterate over each character, keep track of current row and column (of the returned array)
@@ -101,24 +101,24 @@ export function parse(str, { header = true, escapeChar = "\\" } = {}) {
 
     if (!header) return entries; // no data processing needed.
 
-    const headerEntry = entries.shift();
+    let headerEntry = entries.shift();
     if (new Set(headerEntry).size !== headerEntry.length) {
         throw Error("Can't parse CSV as data. Some headers have same name.");
     }
 
     // Auto-construct the headers (JSON objects keys) from the top most line of the file.
     if (isBoolean(header)) header = headerEntry.reduce((o, h) => ((o[h] = true), o), {});
-    const defaultDataHeader = header["*"];
+    let defaultDataHeader = header["*"];
 
     return entries.map((entry) => {
-        const processedEntry = {};
+        let processedEntry = {};
         for (let col = 0; col < entry.length; col++) {
-            const dataHeaderName = headerEntry[col];
-            const dataHeader = isArray(header) ? header[col] : header[dataHeaderName] || defaultDataHeader;
+            let dataHeaderName = headerEntry[col];
+            let dataHeader = isArray(header) ? header[col] : header[dataHeaderName] || defaultDataHeader;
             if (!dataHeader) continue; // We don't want this column
             let value = entry[col];
 
-            const parse = dataHeader.parse || dataHeader;
+            let parse = dataHeader.parse || dataHeader;
             if (isFunction(parse)) value = parse(value, entry);
 
             if (value !== undefined) {
@@ -130,6 +130,13 @@ export function parse(str, { header = true, escapeChar = "\\" } = {}) {
     });
 }
 
+let valueToString = (v) => {
+    if (v == null || v === "" || !((isNumber(v) && !isNaN(v)) || isString(v) || isDate(v) || isBoolean(v))) return ""; // ignore bad data
+
+    v = isDate(v) ? v.toISOString() : String(v); // convert any kind of value to string
+    return v;
+};
+
 /**
  * Generate CSV from your data (arrays or objects) to a string.
  * @param rows {Object[] | String[]}
@@ -140,49 +147,53 @@ export function parse(str, { header = true, escapeChar = "\\" } = {}) {
  * @return {String} The CSV file contents.
  */
 export function generate(rows, { header = true, lineTerminator = "\n", escapeChar = "\\", wrapStrings = false } = {}) {
-    function serialiseString(v) {
+    let serialiseString = (v) => {
         v = v.replace(/"/g, escapeChar + '"'); // Escape quote character
         return wrapStrings || v.includes(",") ? '"' + v + '"' : v; // Add quotes if value has commas
-    }
-
-    function valueToString(v) {
-        if (v == null || v === "" || !((isNumber(v) && !isNaN(v)) || isString(v) || isDate(v) || isBoolean(v)))
-            return ""; // ignore bad data
-
-        v = isDate(v) ? v.toISOString() : String(v); // convert any kind of value to string
-        return v;
-    }
+    };
 
     /**
      * @type {String[]|null}
      */
     let detectedHeaders = null;
     if (header) {
-        if (isBoolean(header)) {
+        if (isArray(header)) {
+            if (!header.length || !header.every(isString))
+                throw new Error("If header is array all items must be strings");
+            detectedHeaders = header;
+        } else {
+            // Here we know that `header` is either `true` or an object.
             if (isObject(rows[0])) {
                 detectedHeaders = keysDeep(mergeDeep({}, ...rows.filter(isObject)));
                 if (detectedHeaders.length === 0) throw new Error("Bad header and rows");
             } else {
                 if (!isArray(rows[0])) throw new Error("Can't auto detect header from rows");
             }
-        } else if (isArray(header)) {
-            if (!header.length || !header.every(isString))
-                throw new Error("If header is array all items must be strings");
-            detectedHeaders = header;
-        } else if (isObject(header)) {
-            detectedHeaders = Object.entries(header)
-                .filter(([k, v]) => v)
-                .map(([k]) => k);
-        } else {
-            throw new Error("Header must be either boolean, or array, or object");
+
+            if (isObject(header)) {
+                // If there is "star" header then the column order would be taken from the data rows;
+                // but if no "*" was given then let's user the `header` object order.
+                let detectedHeadersSet = new Set(header["*"] ? detectedHeaders : Object.keys(header));
+                for (let [key, value] of Object.entries(header)) {
+                    if (!value) {
+                        detectedHeadersSet.delete(key);
+                    } else {
+                        detectedHeadersSet.add(key);
+                    }
+                }
+                detectedHeadersSet.delete("*");
+                detectedHeaders = Array.from(detectedHeadersSet);
+            } else {
+                if (!isBoolean(header)) throw new Error("Header must be either boolean, or array, or object");
+            }
         }
     }
 
-    const textHeader = detectedHeaders
+    let textHeader = detectedHeaders
         ? detectedHeaders
               .map((h) => {
-                  const dataHeader = header[h] || h;
-                  const newHeader = dataHeader.newName || (isString(dataHeader) ? dataHeader : h);
+                  let dataHeader = header[h] || header["*"] || h;
+                  let newHeader = dataHeader.newName || (isString(dataHeader) ? dataHeader : h);
                   return serialiseString(newHeader);
               })
               .join() + lineTerminator
@@ -201,7 +212,7 @@ export function generate(rows, { header = true, lineTerminator = "\n", escapeCha
 
                     return detectedHeaders
                         .map((h) => {
-                            const dataHeader = header[h] || h;
+                            let dataHeader = header[h] || header["*"] || h;
                             let stringify = dataHeader.stringify || dataHeader;
                             if (!isFunction(stringify)) stringify = valueToString;
                             return serialiseString(valueToString(stringify(getDeep(row, h), row)));

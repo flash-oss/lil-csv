@@ -22,7 +22,9 @@
   "keywords": [
     "csv",
     "parse",
-    "csv-parser"
+    "csv-parser",
+    "csv-generator",
+    "csv-object"
   ],
   "author": "",
   "license": "MIT",
