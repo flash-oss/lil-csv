@@ -148,4 +148,41 @@ describe("parse", () => {
             { asIs: "as is", stringColumn: "bla bla", "boolean column": false, " number column ": "123.123" },
         ]);
     });
+
+    it("should parse and rename dates", () => {
+        let fileContents = `ID,First name,Last name,Date of birth,Address,Country
+51234,John,Smith,1999-01-15,"123 John St, CARLTON",AU`;
+
+        const orders = parse(fileContents, {
+            header: {
+                ID: {
+                    parse: Number,
+                    newName: "order_id",
+                },
+                "First name": "recipient.firstName",
+                "Last name": "recipient.lastName",
+                "Date of birth": {
+                    newName: "recipient.dob",
+                    parse: (v) => (v ? new Date(v) : null),
+                },
+                Address: "recipient.address.street",
+                Country: "recipient.address.country",
+            },
+        });
+
+        assert.deepStrictEqual(orders, [
+            {
+                order_id: 51234,
+                recipient: {
+                    firstName: "John",
+                    lastName: "Smith",
+                    dob: new Date("1999-01-15T00:00:00.000Z"),
+                    address: {
+                        street: "123 John St, CARLTON",
+                        country: "AU",
+                    },
+                },
+            },
+        ]);
+    });
 });
