@@ -138,4 +138,28 @@ John,Smith,1999-01-15,123.00,Y
 Alice,Dwarf,1991-11-24,123.00,N`
         );
     });
+
+    it("should parse and generate with '*' header", () => {
+        let fileContents = `firstName,lastName,dob,price,completed
+John,Smith,1999-01-15,123.55,Y
+Alice,Dwarf,1991-11-24,123.55,N`;
+        const people = parse(fileContents, {
+            header: {
+                "*": String,
+                dob: (v) => (v ? new Date(v) : null),
+                price: (v) => (isNaN(v) ? null : Number(v)),
+                completed: (v) => String(v).toUpperCase() === "Y",
+            },
+        });
+
+        let string = generate(people, {
+            header: {
+                "*": String,
+                dob: (v) => (v ? new Date(v).toISOString().substr(0, 10) : ""),
+                price: (v) => (isNaN(v) ? "" : Number(v).toFixed(2)),
+                completed: (v) => (v ? "Y" : "N"),
+            },
+        });
+        assert.strictEqual(string, fileContents);
+    });
 });

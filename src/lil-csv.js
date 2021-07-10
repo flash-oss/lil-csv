@@ -4,6 +4,7 @@ let isNumber = (v) => typeof v === "number";
 let isBoolean = (v) => typeof v === "boolean";
 let isDate = (v) => v instanceof Date && !isNaN(v.valueOf());
 let isObject = (v) => v && typeof v === "object" && !isArray(v);
+const isPlainObject = (value) => value && typeof value == "object" && value.__proto__ == Object.prototype;
 let isFunction = (v) => typeof v === "function";
 
 function getDeep(obj, path) {
@@ -13,7 +14,7 @@ function getDeep(obj, path) {
 function setDeep(obj, path, value) {
     path.split(".").reduce((result, curr, index, paths) => {
         let newVal = index + 1 === paths.length ? value : {};
-        return isObject(result[curr]) ? result[curr] : (result[curr] = newVal);
+        return isPlainObject(result[curr]) ? result[curr] : (result[curr] = newVal);
     }, obj);
 }
 
@@ -21,9 +22,9 @@ function mergeDeep(target, ...sources) {
     if (!sources.length) return target;
     let source = sources.shift();
 
-    if (isObject(target) && isObject(source)) {
+    if (isPlainObject(target) && isPlainObject(source)) {
         for (let [key, value] of Object.entries(source)) {
-            if (isObject(value)) {
+            if (isPlainObject(value)) {
                 mergeDeep((target[key] = target[key] || {}), value);
             } else {
                 target[key] = value;
@@ -37,7 +38,7 @@ function mergeDeep(target, ...sources) {
 function keysDeep(obj, prefix) {
     return Object.entries(obj).reduce((keys, [k, v]) => {
         let newKey = prefix ? prefix + "." + k : k;
-        return keys.concat(isObject(v) ? keysDeep(v, newKey) : newKey);
+        return keys.concat(isPlainObject(v) ? keysDeep(v, newKey) : newKey);
     }, []);
 }
 
@@ -170,7 +171,7 @@ export function generate(rows, { header = true, lineTerminator = "\n", escapeCha
                 if (!isArray(rows[0])) throw new Error("Can't auto detect header from rows");
             }
 
-            if (isObject(header)) {
+            if (isPlainObject(header)) {
                 // If there is "star" header then the column order would be taken from the data rows;
                 // but if no "*" was given then let's user the `header` object order.
                 let detectedHeadersSet = new Set(header["*"] ? detectedHeaders : Object.keys(header));
