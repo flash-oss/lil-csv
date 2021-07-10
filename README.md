@@ -258,8 +258,7 @@ const rows = [
 
 const text = generate(rows, {
   header: {
-    name: String,
-    isCompany: String,
+    "*": String, // Do not skip undeclared headers, instead serialise them as String
     createdAt: (v, entry) =>
       new Date(v).toISOString().substr(0, entry.isCompany ? 10 : 100),
     balance: (v) => v.toFixed(2),
@@ -309,7 +308,8 @@ Acme Inc,true,2021-11-22,1000150.10`
     - Object - generate CSV from these columns **ONLY**.
       - Object keys - the only column names to be saved in the CSV file, Object values - either string, of function, or Object.
       - value is String - rename CSV header. E.g. `"user.firstName": "User First Name"`
-      - value is Function - use this function to deserialise a CSV cell to a value. E.g. convert "2020-12-12" string to a Date.
+      - value is Function - use this function to stringify a CSV cell. E.g. convert Date to "2020-12-12" string.
       - value is Object - setting for each column name.
         - `header[].stringify` - use this function to stringify a CSV cell. E.g. convert Date to "2020-12-12" string.
         - `header[].newName` - rename CSV header. E.g. `"user.firstName": "User First Name"`
+      - key is `"*"`, value is used as a default column serialiser for unknown columns.
