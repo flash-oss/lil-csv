@@ -1,6 +1,6 @@
 # lil-csv
 
-Mini 1k module for CSV file manipulations
+Mini 1k module for CSV, TSV, PSV file manipulations
 
 - Parse CSV text to deep JSON objects.
 - Customise each column parsing with your code.
@@ -8,6 +8,7 @@ Mini 1k module for CSV file manipulations
 - Rename CSV headers and object keys on the fly.
 - Simply generate CSV from arrays of strings.
 - Parse CSV to simple arrays of strings.
+- TSV (tab-separated values), PSV (pipe-separated values), and other-separated values.
 
 ## Usage
 
@@ -275,11 +276,13 @@ Acme Inc,true,2021-11-22,1000150.10`
 
 ## API
 
-### `parse(text, [options = { header: true, escapeChar: "\\" }])`
+### `parse(text, [options = { header: true, delimiter: ",", quoteChar: '"', escapeChar: "\\" }])`
 
 - `text` - String, the string to parse.
 - `options` - Object, optional parsing settings.
-  - `options.escapeChar` - String character, the escape character used within that CSV.
+  - `options.delimiter` - String character, value separator. E.g. `\t` for TSV, `|` for PSV, etc. Default is comma: `,`.
+  - `options.quoteChar` - String character. Which char to use to wrap strings. Default is double quotes: `"`.
+  - `options.escapeChar` - String character, the escape character used within that file. Default is backslash: `\`.
   - `options.header` - Boolean, or Array of string, or Object. Default is `true`.
     - Boolean
       - `true` - create JSON objects from CSV rows. Assume first row of the text is a header, would be used as object keys.
@@ -294,12 +297,15 @@ Acme Inc,true,2021-11-22,1000150.10`
         - `header[].newName` - rename CSV header. E.g. `"User First Name": "user.firstName"`
       - key is `"*"`, value is used as a default column parser for unknown columns.
 
-### `generate(rows, [options = { header: true, escapeChar: "\\", lineTerminator: "\n" }])`
+### `generate(rows, [options = { header: true, delimiter: ",", quoteChar: '"', escapeChar: "\\", wrapStrings: false, lineTerminator: "\n" }])`
 
 - `rows` - array of arrays. The data to generate the CSV from. Each row must be euther array of object.
 - `options` - Object, optional settings.
-  - `options.escapeChar` - String character, the escape character used within that CSV.
-  - `options.lineTerminator` - String character, the new line character used within that CSV.
+  - `options.delimiter` - String character, value separator. E.g. `\t` for TSV, `|` for PSV, etc. Default is comma: `,`.
+  - `options.quoteChar` - String character. Which char to use to wrap strings. Default is double quotes: `"`.
+  - `options.escapeChar` - String character, the escape character used within that file. Default is backslash: `\`.
+  - `options.wrapStrings` - Boolean, set it to `true` if all string cells must be wrapped with the `quoteChar`. Default is `false`.
+  - `options.lineTerminator` - String character, the new line character used within that file.
   - `options.header` - Boolean, or Array of string, or Object. Default is `true`.
     - Boolean
       - `true` - autodetect column names (header) from the `rows`. If `rows` data are objects, then keys would be the column names. If `rows` are arrays, then the first row is assumed to be the header.

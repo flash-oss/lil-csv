@@ -44,14 +44,28 @@ describe("generate + parse", () => {
     it("should work on fully customised options", () => {
         const text = generate(
             [
-                ["my str", -123.123, false, new Date("2020-12-12"), "1999-09-09", {}, "whatever", ""],
+                ["my ' \\' str", -123.123, false, new Date("2020-12-12"), "1999-09-09", {}, "whatever", ""],
                 [-1, "not number", "False", new Date("invalid date"), "bad DOB", [], "whatever", ""],
             ],
             {
+                delimiter: "\t",
+                quoteChar: "'",
+                escapeChar: "/",
+                lineTerminator: "\r\n",
                 header: [`A string`, `num`, `bool`, `date`, `date of birth`, `bad data`, `skip this`, `skip this too`],
             }
         );
+        assert.strictEqual(
+            text,
+            `A string\tnum\tbool\tdate\tdate of birth\tbad data\tskip this\tskip this too\r\n` +
+                `my /' \\/' str\t-123.123\tfalse\t2020-12-12T00:00:00.000Z\t1999-09-09\t\twhatever\t\r\n` +
+                `-1\tnot number\tFalse\t\tbad DOB\t\twhatever\t`
+        );
+
         const data = parse(text, {
+            delimiter: "\t",
+            quoteChar: "'",
+            escapeChar: "/",
             header: {
                 "A string": "stringX",
                 num: { newName: "numberX", parse: (v) => (v && !Number.isNaN(Number(v)) ? Number(v) : "") },
@@ -67,7 +81,7 @@ describe("generate + parse", () => {
         });
         assert.deepStrictEqual(data, [
             {
-                stringX: "my str",
+                stringX: "my ' \\' str",
                 numberX: -123.123,
                 booleanX: false,
                 dateX: new Date("2020-12-12T00:00:00.000Z"),

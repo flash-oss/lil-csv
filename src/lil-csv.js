@@ -45,10 +45,12 @@ function keysDeep(obj, prefix) {
 /**
  * @param str {String} The CSV file contents.
  * @param [header=true] {Boolean | String[] | Object.<string,String> | Object.<string,Function> | Object.<string,{[parse]:Function,[newName]:String}>}
- * @param [escapeChar="\\"] {String}
+ * @param [delimiter=","] {String} specifies the character sequence which should separate fields (aka columns). Default = `","`. Examples: `"\t"` or `"|"`.
+ * @param [quoteChar='"'] {String} specifies a one-character string to use as the quoting character. Default = `\"`
+ * @param [escapeChar="\\"] {String} specifies a one-character string to use for escaping, mutually exclusive with `quoteChar`. Default: `"\\"`
  * @return {Object[] | String[] | *[]} The parsed strings, objects, values of all kind(s).
  */
-export function parse(str, { header = true, escapeChar = "\\" } = {}) {
+export function parse(str, { header = true, delimiter = ",", quoteChar = '"', escapeChar = "\\" } = {}) {
     let entries = [];
     let quote = false; // 'true' means we're inside a quoted field
 
@@ -67,14 +69,14 @@ export function parse(str, { header = true, escapeChar = "\\" } = {}) {
         }
 
         // If it's just one quotation mark, begin/end quoted field
-        if (cc === '"') {
+        if (cc === quoteChar) {
             quote = !quote;
             continue;
         }
 
         if (!quote) {
             // If it's a comma, move on to the next column
-            if (cc === ",") {
+            if (cc === delimiter) {
                 ++col;
                 entries[row][col] = ""; // If line ends with comma we need to add an empty column to the row.
                 continue;
@@ -140,17 +142,30 @@ let valueToString = (v) => {
 
 /**
  * Generate CSV from your data (arrays or objects) to a string.
+ * The options are named using this standard: https://specs.frictionlessdata.io//csv-dialect/#specification
  * @param rows {Object[] | String[]}
  * @param [header=true] {Boolean | String[] | Object.<string,Boolean> | Object.<string,String> | Object.<string,Function> | Object.<string,{[stringify]:Function,[newName]:String}>}
- * @param [lineTerminator="\n"] {String}
- * @param [escapeChar="\\"] {String}
- * @param [wrapStrings=false] {Boolean}
+ * @param [delimiter=","] {String} specifies the character sequence which should separate fields (aka columns). Default = `","`. Examples: `"\t"` or `"|"`.
+ * @param [quoteChar='"'] {String} specifies a one-character string to use as the quoting character. Default = `\"`
+ * @param [escapeChar="\\"] {String} specifies a one-character string to use for escaping, mutually exclusive with `quoteChar`. Default: `"\\"`
+ * @param [wrapStrings=false] {Boolean} specifies if all string cells must be wrapped with the `quoteChar`
+ * @param [lineTerminator="\n"] {String} specifies the character sequence which should terminate rows. Default = `"\n"`
  * @return {String} The CSV file contents.
  */
-export function generate(rows, { header = true, lineTerminator = "\n", escapeChar = "\\", wrapStrings = false } = {}) {
+export function generate(
+    rows,
+    {
+        header = true,
+        delimiter = ",",
+        lineTerminator = "\n",
+        quoteChar = '"',
+        escapeChar = "\\",
+        wrapStrings = false,
+    } = {}
+) {
     let serialiseString = (v) => {
-        v = v.replace(/"/g, escapeChar + '"'); // Escape quote character
-        return wrapStrings || v.includes(",") ? '"' + v + '"' : v; // Add quotes if value has commas
+        v = v.replace(new RegExp(quoteChar, "g"), escapeChar + quoteChar); // Escape quote character
+        return wrapStrings || v.includes(delimiter) ? quoteChar + v + quoteChar : v; // Add quotes if value has commas
     };
 
     /**
@@ -197,7 +212,7 @@ export function generate(rows, { header = true, lineTerminator = "\n", escapeCha
                   let newHeader = dataHeader.newName || (isString(dataHeader) ? dataHeader : h);
                   return serialiseString(newHeader);
               })
-              .join() + lineTerminator
+              .join(delimiter) + lineTerminator
         : "";
     return (
         textHeader +
@@ -206,7 +221,7 @@ export function generate(rows, { header = true, lineTerminator = "\n", escapeCha
                 if (isArray(row)) {
                     if (detectedHeaders && row.length !== detectedHeaders.length)
                         throw new Error(`Each row array must have exactly ${detectedHeaders.length} items`);
-                    return row.map((v) => serialiseString(valueToString(v))).join();
+                    return row.map((v) => serialiseString(valueToString(v))).join(delimiter);
                 }
                 if (isObject(row)) {
                     if (!detectedHeaders) throw new Error("Unexpected row object");
@@ -218,7 +233,7 @@ export function generate(rows, { header = true, lineTerminator = "\n", escapeCha
                             if (!isFunction(stringify)) stringify = valueToString;
                             return serialiseString(valueToString(stringify(getDeep(row, h), row)));
                         })
-                        .join();
+                        .join(delimiter);
                 }
                 throw new Error(`Row ${i} must be either array or object`);
             })
