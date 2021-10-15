@@ -4,8 +4,13 @@
   "description": "Mini 1k module for CSV, TSV, PSV file manipulations",
   "source": "src/lil-csv.js",
   "main": "dist/lil-csv.js",
-  "exports": "./dist/lil-csv.modern.js",
-  "module": "dist/lil-csv.module.js",
+  "exports": {
+    ".": {
+      "require": "./dist/lil-csv.js",
+      "import": "./dist/lil-csv.modern.js"
+    }
+  },
+  "module": "dist/lil-csv.modern.js",
   "unpkg": "dist/lil-csv.umd.js",
   "umd:main": "dist/lil-csv.umd.js",
   "scripts": {
