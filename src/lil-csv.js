@@ -18,23 +18,6 @@ function setDeep(obj, path, value) {
     }, obj);
 }
 
-function mergeDeep(target, ...sources) {
-    if (!sources.length) return target;
-    let source = sources.shift();
-
-    if (isPlainObject(target) && isPlainObject(source)) {
-        for (let [key, value] of Object.entries(source)) {
-            if (isPlainObject(value)) {
-                mergeDeep((target[key] = target[key] || {}), value);
-            } else {
-                target[key] = value;
-            }
-        }
-    }
-
-    return mergeDeep(target, ...sources);
-}
-
 function keysDeep(obj, prefix) {
     return Object.entries(obj).reduce((keys, [k, v]) => {
         let newKey = prefix ? prefix + "." + k : k;
@@ -180,7 +163,7 @@ export function generate(
         } else {
             // Here we know that `header` is either `true` or an object.
             if (isObject(rows[0])) {
-                detectedHeaders = keysDeep(mergeDeep({}, ...rows.filter(isObject)));
+                detectedHeaders = keysDeep(rows[0]);
                 if (detectedHeaders.length === 0) throw new Error("Bad header and rows");
             } else {
                 if (!isArray(rows[0])) throw new Error("Can't auto detect header from rows");

@@ -24,6 +24,13 @@ import { parse, generate } from "lil-csv";
 const { parse, generate } = require("lil-csv");
 ```
 
+## Performance
+
+`lil-csv` v1.4 is faster than `fast-csv`. See [these benchmarks](https://github.com/koresar/csvbench#result).
+Parsing a 300,000 lines CSV file takes about 1 sec on a Macbook Pro 2019.
+
+However, if you have insanely large files to parse then use `papaparse`. The module is rather fast, featureful, and support data streaming. Although, few times larger than `lil-csv`, does not support modern ES6 modules or treeshaking.
+
 ### Examples
 
 #### Objects
@@ -308,7 +315,7 @@ Acme Inc,true,2021-11-22,1000150.10`
   - `options.lineTerminator` - String character, the new line character used within that file.
   - `options.header` - Boolean, or Array of string, or Object. Default is `true`.
     - Boolean
-      - `true` - autodetect column names (header) from the `rows`. If `rows` data are objects, then keys would be the column names. If `rows` are arrays, then the first row is assumed to be the header.
+      - `true` - autodetect column names (header) from the first row in the `rows`. If first row is an object, then its keys would be the column names. If first row is an array, then it is assumed to be the header.
       - `false` - generate CSV from `rows` without any column names (header).
     - Array - array of strings to override all column names. If `rows` are objects, then each column name must match object keys.
     - Object - generate CSV from these columns **ONLY**.
