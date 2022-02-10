@@ -1,6 +1,6 @@
 {
   "name": "lil-csv",
-  "version": "1.4.4",
+  "version": "1.4.5",
   "description": "Mini 1k module for CSV, TSV, PSV file manipulations",
   "source": "src/lil-csv.js",
   "main": "dist/lil-csv.js",
