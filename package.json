@@ -13,6 +13,7 @@
   "module": "dist/lil-csv.modern.js",
   "unpkg": "dist/lil-csv.umd.js",
   "umd:main": "dist/lil-csv.umd.js",
+  "sideEffects": false,
   "scripts": {
     "prepublishOnly": "npm run build",
     "ci": "npm i && npm t",
