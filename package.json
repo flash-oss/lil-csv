@@ -3,14 +3,14 @@
   "version": "1.4.5",
   "description": "Mini 1k module for CSV, TSV, PSV file manipulations",
   "source": "src/lil-csv.js",
-  "main": "dist/lil-csv.js",
+  "main": "dist/lil-csv.umd.js",
+  "module": "dist/lil-csv.module.mjs",
   "exports": {
     ".": {
       "require": "./dist/lil-csv.js",
-      "import": "./dist/lil-csv.modern.js"
+      "import": "./dist/lil-csv.modern.mjs"
     }
   },
-  "module": "dist/lil-csv.modern.js",
   "unpkg": "dist/lil-csv.umd.js",
   "umd:main": "dist/lil-csv.umd.js",
   "sideEffects": false,
@@ -40,7 +40,7 @@
   "homepage": "https://github.com/flash-oss/lil-csv#readme",
   "devDependencies": {
     "esm": "^3.2.25",
-    "microbundle": "^0.13.0",
+    "microbundle": "^0.15.1",
     "mocha": "^8.3.2",
     "nyc": "^15.1.0",
     "prettier": "^2.2.1"
